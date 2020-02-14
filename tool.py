@@ -1,88 +1,10 @@
 #coding: utf-8
 from PIL import Image
-import shutil
 import os
 import sys
 import json
 from datetime import datetime
-#from ImageProcess import Graphics
-
-class Graphics:  
-    '''图片处理类
-    
-    参数
-    -------
-    infile: 输入文件路径
-    outfile: 输出文件路径
-    '''
-    def __init__(self, infile, outfile):
-        self.infile = infile
-        self.outfile = outfile
-
-    def fixed_size(self, width, height):  
-        """按照固定尺寸处理图片"""  
-        im = Image.open(self.infile)  
-        out = im.resize((width, height),Image.ANTIALIAS)  
-        out.save(self.outfile)  
-
-
-    def resize_by_width(self, w_divide_h):  
-        """按照宽度进行所需比例缩放"""  
-        im = Image.open(self.infile)  
-        (x, y) = im.size   
-        x_s = x  
-        y_s = x/w_divide_h  
-        out = im.resize((x_s, y_s), Image.ANTIALIAS)   
-        out.save(self.outfile)  
-
-
-    def resize_by_height(self, w_divide_h):  
-        """按照高度进行所需比例缩放"""  
-        im = Image.open(self.infile)  
-        (x, y) = im.size   
-        x_s = y*w_divide_h  
-        y_s = y  
-        out = im.resize((x_s, y_s), Image.ANTIALIAS)   
-        out.save(self.outfile)  
-
-
-    def resize_by_size(self, size):  
-        """按照生成图片文件大小进行处理(单位KB)"""  
-        size *= 1024  
-        im = Image.open(self.infile)  
-        size_tmp = os.path.getsize(self.infile)  
-        q = 100  
-        while size_tmp > size and q > 0:  
-            print (q)  
-            out = im.resize(im.size, Image.ANTIALIAS)  
-            out.save(self.outfile, quality=q)  
-            size_tmp = os.path.getsize(self.outfile)  
-            q -= 5  
-        if q == 100:  
-            shutil.copy(self.infile, self.outfile)  
-
-  
-    def cut_by_ratio(self):  
-        """按照图片长宽进行分割
-        
-        ------------
-        取中间的部分，裁剪成正方形
-        """  
-        im = Image.open(self.infile)  
-        (x, y) = im.size  
-        if x > y:  
-            region = (int(x/2-y/2), 0, int(x/2+y/2), y)  
-            #裁切图片  
-            crop_img = im.crop(region)  
-            #保存裁切后的图片  
-            crop_img.save(self.outfile)             
-        elif x < y:  
-            region = (0, int(y/2-x/2), x, int(y/2+x/2))
-            #裁切图片  
-            crop_img = im.crop(region)  
-            #保存裁切后的图片  
-            crop_img.save(self.outfile)       
-
+from ImageProcess import Graphics
 
 # 定义压缩比，数值越大，压缩越小
 SIZE_normal = 1.0
@@ -165,8 +87,9 @@ def compress_photo():
     for i in range(len(file_list_des)):
         if file_list_des[i] in file_list_src:
             file_list_src.remove(file_list_des[i])
-    compress('1', des_dir, src_dir, file_list_src)
-
+    if len(file_list_src) == 0:
+        print("=====没有新文件需要压缩=======")
+    compress('4', des_dir, src_dir, file_list_src)
 
 def handle_photo():
     '''根据图片的文件名处理成需要的json格式的数据
@@ -177,10 +100,10 @@ def handle_photo():
     src_dir, des_dir = "photos/", "min_photos/"
     file_list = list_img_file(src_dir)
     list_info = []
+    file_list.sort(key=lambda x: x.split('_')[0])   # 按照日期排序
     for i in range(len(file_list)):
         filename = file_list[i]
-        date_str, *info = filename.split("_")
-        info='_'.join(info)
+        date_str, info = filename.split("_")
         info, _ = info.split(".")
         date = datetime.strptime(date_str, "%Y-%m-%d")
         year_month = date_str[0:7]            
@@ -208,8 +131,9 @@ def handle_photo():
             list_info[-1]['arr']['type'].append('image')
     list_info.reverse()  # 翻转
     final_dict = {"list": list_info}
-    with open("D:/Program Files/Hexo-cli/Hexo/themes/hexo-theme-next/source/album/data.json","w") as fp:
+    with open("https://github.com/Kaykun/Kaykun.github.io/tree/master/photos/data.json","w") as fp:
         json.dump(final_dict, fp)
+
 def cut_photo():
     """裁剪算法
     
@@ -236,20 +160,22 @@ def cut_photo():
 
 
 def git_operation():
+    '''
+    git 命令行函数，将仓库提交
     
+    ----------
+    需要安装git命令行工具，并且添加到环境变量中
+    '''
     os.system('git add --all')
     os.system('git commit -m "add photos"')
     os.system('git push origin master')
 
-# if __name__ == "__main__":
-#     cut_photo()        # 裁剪图片，裁剪成正方形，去中间部分
-#     compress_photo()   # 压缩图片，并保存到mini_photos文件夹下
-#     git_operation()    # 提交到github仓库
-#     handle_photo()     # 将文件处理成json格式，存到博客仓库中
-cut_photo()        # 裁剪图片，裁剪成正方形，去中间部分
-compress_photo()   # 压缩图片，并保存到mini_photos文件夹下
-git_operation()    # 提交到github仓库
-handle_photo()     # 将文件处理成json格式，存到博客仓库中   
+if __name__ == "__main__":
+    cut_photo()        # 裁剪图片，裁剪成正方形，去中间部分
+    compress_photo()   # 压缩图片，并保存到mini_photos文件夹下
+    git_operation()    # 提交到github仓库
+    handle_photo()     # 将文件处理成json格式，存到博客仓库中
+    
     
     
     
